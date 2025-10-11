@@ -1,18 +1,46 @@
 import tkinter as tk
+import json
+import os
 
-# --- Setup main window ---
+# --- Constants ---
+FILENAME = "tasks.json"
+
+# --- Functions for file handling ---
+def save_tasks():
+    """Save current tasks to JSON file."""
+    tasks = task_listbox.get(0, tk.END)
+    with open(FILENAME, "w") as f:
+        json.dump(list(tasks), f, indent=4)
+
+def load_tasks():
+    """Load tasks from JSON file (if it exists)."""
+    if os.path.exists(FILENAME):
+        try:
+            with open(FILENAME, "r") as f:
+                tasks = json.load(f)
+            for t in tasks:
+                task_listbox.insert(tk.END, t)
+                # Gray out completed tasks
+                if t.startswith("✓ "):
+                    index = task_listbox.size() - 1
+                    task_listbox.itemconfig(index, fg="gray")
+        except (json.JSONDecodeError, OSError):
+            print("Error loading saved tasks.")
+
+# --- Tkinter setup ---
 root = tk.Tk()
 root.title("To-Do List App")
-root.geometry("500x600")
+root.geometry("400x500")
 root.resizable(False, False)
 root.config(bg="#f0f0f0")
 
-# --- Functions ---
+# --- Functions for user actions ---
 def add_task():
     task = task_entry.get().strip()
     if task:
         task_listbox.insert(tk.END, task)
         task_entry.delete(0, tk.END)
+        save_tasks()
     else:
         print("Please enter a task!")
 
@@ -20,11 +48,13 @@ def delete_task():
     try:
         selected_index = task_listbox.curselection()[0]
         task_listbox.delete(selected_index)
+        save_tasks()
     except IndexError:
         print("Please select a task to delete!")
 
 def clear_all_tasks():
     task_listbox.delete(0, tk.END)
+    save_tasks()
 
 def mark_complete():
     try:
@@ -34,6 +64,7 @@ def mark_complete():
             task_listbox.delete(selected_index)
             task_listbox.insert(selected_index, "✓ " + task)
             task_listbox.itemconfig(selected_index, fg="gray")
+            save_tasks()
     except IndexError:
         print("Please select a task to mark as complete!")
 
@@ -42,7 +73,7 @@ header_frame = tk.Frame(root, bg="#4a7c9e")
 header_frame.pack(fill=tk.X)
 
 header_label = tk.Label(
-    header_frame, text="📝 My Simple To-Do List",
+    header_frame, text="📝 My To-Do List",
     font=("Arial", 18, "bold"), bg="#4a7c9e", fg="white"
 )
 header_label.pack(pady=15)
@@ -127,5 +158,7 @@ footer_label = tk.Label(
 )
 footer_label.pack(side=tk.BOTTOM, pady=10)
 
-# --- Run app ---
+# --- Load tasks and run app ---
+load_tasks()
+root.protocol("WM_DELETE_WINDOW", lambda: (save_tasks(), root.destroy()))
 root.mainloop()
