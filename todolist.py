@@ -27,7 +27,7 @@ def load_tasks():
 # --- Tkinter setup ---
 root = tk.Tk()
 root.title("To-Do List App")
-root.geometry("400x520")
+root.geometry("500x600")
 root.resizable(False, False)
 root.config(bg="#f0f0f0")
 
