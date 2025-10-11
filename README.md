@@ -19,9 +19,7 @@ It lets you easily manage daily tasks — add, edit, delete, mark complete, and 
 
 ## 🖼️ Preview
 
-> ```
 > ![App Screenshot](images/todo_screenshot.png)
-> ```
 
 ---
 
