@@ -1,6 +1,7 @@
 import tkinter as tk
 import json
 import os
+from time import time, ctime, localtime
 
 # --- Constants ---
 FILENAME = "tasks.json"
@@ -35,7 +36,7 @@ root.config(bg="#f0f0f0")
 def add_task():
     task = task_entry.get().strip()
     if task:
-        task_listbox.insert(tk.END, task)
+        task_listbox.insert(tk.END, f"{localtime()[2]}/{localtime()[1]}/{localtime()[0]} {localtime()[3]}:{localtime()[4]} : {task}")
         task_entry.delete(0, tk.END)
         save_tasks()
     else:
