@@ -9,6 +9,8 @@ FILENAME = "tasks.json"
 
 # --- Data ---
 tasks = []
+is_editing = False  # Track state for the Return/Enter key
+current_edit_index = None
 
 # --- File handling ---
 def save_tasks():
@@ -18,7 +20,14 @@ def save_tasks():
 def load_tasks():
     if os.path.exists(FILENAME):
         try:
-            raw_tasks = json.load(open(FILENAME, "r", encoding="utf-8"))
+            # Use 'with' to guarantee the file closes properly
+            with open(FILENAME, "r", encoding="utf-8") as f:
+                # Handle completely empty files gracefully
+                content = f.read().strip()
+                if not content:
+                    return []
+                raw_tasks = json.loads(content)
+                
             new_tasks = []
             for t in raw_tasks:
                 if isinstance(t, list) and len(t) == 2:
@@ -27,7 +36,8 @@ def load_tasks():
                     new_tasks.append(["Normal", t])
             return new_tasks
         except (json.JSONDecodeError, OSError):
-            alert_box("Task Error", "Error loading saved tasks.")
+            # We will show the alert box after root is initialized to prevent UI bugs
+            return []
     return []
 
 # --- Tkinter setup ---
@@ -43,6 +53,10 @@ def alert_box(title, message):
     win.title(title)
     win.geometry("300x150")
     win.resizable(False, False)
+    # Ensure the popup stays on top
+    win.transient(root)
+    win.grab_set()
+    
     tk.Label(win, text=title, font=("Arial", 14, "bold")).pack(pady=10)
     tk.Label(win, text=message, font=("Arial", 11)).pack(pady=5)
     tk.Button(win, text="OK", command=win.destroy).pack(pady=10)
@@ -63,6 +77,13 @@ def refresh_listbox():
             task_listbox.itemconfig(index, fg="gray", bg=get_color(status))
         else:
             task_listbox.itemconfig(index, bg=get_color(status), fg="black")
+
+def handle_return_key(event):
+    """Routes the Enter key dynamically depending on app state."""
+    if is_editing:
+        save_edit(current_edit_index)
+    else:
+        add_task()
 
 def add_task():
     name = task_entry.get().strip()
@@ -87,6 +108,8 @@ def delete_task():
         tasks.pop(index)
         refresh_listbox()
         save_tasks()
+        if is_editing and index == current_edit_index:
+            cancel_edit()
     except IndexError:
         alert_box("Task Error", "Please select a task to delete!")
 
@@ -94,6 +117,7 @@ def clear_all_tasks():
     tasks.clear()
     refresh_listbox()
     save_tasks()
+    cancel_edit()
 
 def mark_complete():
     try:
@@ -107,6 +131,7 @@ def mark_complete():
         alert_box("Task Error", "Please select a task to mark as complete!")
 
 def edit_task():
+    global is_editing, current_edit_index
     try:
         index = task_listbox.curselection()[0]
         name = tasks[index][1]
@@ -118,6 +143,9 @@ def edit_task():
         task_entry.insert(0, name)
         combo.set(tasks[index][0])
 
+        is_editing = True
+        current_edit_index = index
+
         add_button.config(
             text="Save Edit",
             bg="#0275d8",
@@ -127,6 +155,7 @@ def edit_task():
         alert_box("Task Error", "Please select a task to edit!")
 
 def save_edit(index):
+    global is_editing, current_edit_index
     name = task_entry.get().strip()
     status = combo.get()
     if not name:
@@ -141,7 +170,12 @@ def save_edit(index):
     tasks[index] = [status, full_name]
     refresh_listbox()
     save_tasks()
+    cancel_edit()
 
+def cancel_edit():
+    global is_editing, current_edit_index
+    is_editing = False
+    current_edit_index = None
     task_entry.delete(0, tk.END)
     combo.set("Normal")
     add_button.config(
@@ -165,7 +199,7 @@ input_frame.pack(pady=10)
 
 task_entry = tk.Entry(input_frame, width=30, font=("Arial", 12), bd=2, relief=tk.GROOVE)
 task_entry.pack(side=tk.LEFT, padx=10, ipady=5)
-task_entry.bind("<Return>", lambda e: add_task())
+task_entry.bind("<Return>", handle_return_key) # Updated binding
 
 combo = ttk.Combobox(
     input_frame,
